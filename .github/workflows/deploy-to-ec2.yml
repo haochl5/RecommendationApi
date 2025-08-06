@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [ main, master ]
 
-env:
-  REGISTRY: docker.io
-  IMAGE_NAME: hello-world-spring
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -56,23 +52,8 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
-    - name: Build application
+    - name: Build application (for validation)
       run: ./mvnw clean package -DskipTests
-
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    - name: Build and push Docker image
-      env:
-        IMAGE_TAG: ${{ github.sha }}
-      run: |
-        docker build -t ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
-        docker build -t ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest .
-        docker push ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-        docker push ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
 
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.0
@@ -86,18 +67,20 @@ jobs:
           cd RecommendationApi
           git pull origin main
 
-
           # Stop and remove existing container
           docker stop hello-world-app || true
           docker rm hello-world-app || true
           
-          # Remove old images
-          docker rmi $(docker images '${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}' -q) || true
+          # Remove old development image
+          docker rmi hello-world-dev || true
           
-          # Pull latest image
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          # Build development image from source
+          docker build -f Dockerfile.dev -t hello-world-dev .
           
-          # Run new container
+          # Create Maven cache volume if it doesn't exist
+          docker volume create maven-cache || true
+          
+          # Run new container with source mounted
           docker run -d \
             --name hello-world-app \
             --restart unless-stopped \
@@ -108,20 +91,40 @@ jobs:
             -v $(pwd)/.mvn:/app/.mvn \
             -v $(pwd)/build.sh:/app/build.sh \
             -v maven-cache:/root/.m2 \
-            hello-world-build-image \
+            hello-world-dev \
             bash -c "chmod +x /app/build.sh && /app/build.sh"
           
-          # Wait for application to start
-          sleep 30
+          # Wait for build and application to start
+          echo "⏳ Waiting for build to complete..."
+          sleep 60
           
-          # Verify deployment
-          if curl -f http://localhost:8080/hello; then
-            echo "✅ Deployment successful!"
-          else
-            echo "❌ Deployment failed!"
+          # Check if container is still running (build might have failed)
+          if ! docker ps | grep -q hello-world-app; then
+            echo "❌ Container stopped - build likely failed!"
             docker logs hello-world-app
             exit 1
           fi
+          
+          # Wait a bit more for application startup
+          sleep 30
+          
+          # Verify deployment with retries
+          echo "🔍 Verifying deployment..."
+          for i in {1..10}; do
+            if curl -f http://localhost:8080/hello; then
+              echo "✅ Deployment successful!"
+              break
+            else
+              echo "⏳ Attempt $i/10 - waiting for application..."
+              if [ $i -eq 10 ]; then
+                echo "❌ Deployment verification failed!"
+                echo "📋 Container logs:"
+                docker logs hello-world-app
+                exit 1
+              fi
+              sleep 10
+            fi
+          done
 
     - name: Notify deployment status
       if: always()
@@ -129,6 +132,7 @@ jobs:
         if [ "${{ job.status }}" == "success" ]; then
           echo "🚀 Deployment to EC2 completed successfully!"
           echo "🌐 Application URL: http://${{ secrets.EC2_HOST }}:8080/hello"
+          echo "📦 Application built from source code on server"
         else
           echo "❌ Deployment failed!"
         fi
