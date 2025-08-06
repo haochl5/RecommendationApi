@@ -75,7 +75,7 @@ jobs:
           docker rmi hello-world-dev || true
           
           # Build development image from source
-          docker build -f Dockerfile.dev -t hello-world-dev .
+          docker build -f Dockerfile -t hello-world-dev .
           
           # Create Maven cache volume if it doesn't exist
           docker volume create maven-cache || true
