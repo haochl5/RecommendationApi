@@ -82,6 +82,11 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         port: 22
         script: |
+          # Update source code
+          cd /home/ec2-user/your-app-directory  # Change to your app directory
+          git pull origin main
+
+
           # Stop and remove existing container
           docker stop hello-world-app || true
           docker rm hello-world-app || true
@@ -97,7 +102,14 @@ jobs:
             --name hello-world-app \
             --restart unless-stopped \
             -p 8080:8080 \
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            -v $(pwd)/src:/app/src \
+            -v $(pwd)/pom.xml:/app/pom.xml \
+            -v $(pwd)/mvnw:/app/mvnw \
+            -v $(pwd)/.mvn:/app/.mvn \
+            -v $(pwd)/build.sh:/app/build.sh \
+            -v maven-cache:/root/.m2 \
+            hello-world-build-image \
+            bash -c "chmod +x /app/build.sh && /app/build.sh"
           
           # Wait for application to start
           sleep 30
