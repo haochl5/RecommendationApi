@@ -59,7 +59,7 @@ public class AuthController {
         }
     }
     
-    @GetMapping("/register")
+    @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest registerRequest) {
         try {
             // Validate password confirmation

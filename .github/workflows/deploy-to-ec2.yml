@@ -137,11 +137,11 @@ jobs:
           fi
           
           # Wait a bit more for the application to fully start
-          sleep 30
+          sleep 40
           
           # Verify deployment with health check
           echo "Verifying deployment..."
-          max_attempts=2
+          max_attempts=6
           attempt=1
           
           while [ $attempt -le $max_attempts ]; do
