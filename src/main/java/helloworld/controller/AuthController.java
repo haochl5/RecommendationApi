@@ -3,6 +3,10 @@ package helloworld.controller;
 import helloworld.Model.LoginRequest;
 import helloworld.Model.LoginResponse;
 import helloworld.Model.LogoutResponse;
+import helloworld.Model.RegisterRequest;
+import helloworld.Model.RegisterResponse;
+import helloworld.Model.User;
+import helloworld.service.UserService;
 import helloworld.Utils.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -25,6 +29,9 @@ public class AuthController {
     
     @Autowired
     private JwtUtil jwtUtil;
+    
+    @Autowired
+    private UserService userService;
     
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
@@ -49,6 +56,52 @@ public class AuthController {
         } catch (Exception e) {
             LoginResponse errorResponse = new LoginResponse("Invalid username or password");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+        }
+    }
+    
+    @GetMapping("/register")
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest registerRequest) {
+        try {
+            // Validate password confirmation
+            if (!registerRequest.getPassword().equals(registerRequest.getConfirmPassword())) {
+                RegisterResponse errorResponse = new RegisterResponse("Passwords do not match", false);
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Check if username already exists
+            if (userService.existsByUsername(registerRequest.getUsername())) {
+                RegisterResponse errorResponse = new RegisterResponse("Username already exists", false);
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+            
+            // Check if email already exists
+            if (userService.existsByEmail(registerRequest.getEmail())) {
+                RegisterResponse errorResponse = new RegisterResponse("Email already exists", false);
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+             // Create new user
+            User newUser = new User(
+                registerRequest.getUsername(),
+                registerRequest.getEmail(),
+                registerRequest.getPassword()
+            );
+            
+            // Save user (password will be encoded in the service)
+            User savedUser = userService.save(newUser);
+            
+            // Create success response
+            RegisterResponse successResponse = new RegisterResponse(
+                "User registered successfully",
+                true,
+                savedUser.getUsername(),
+                savedUser.getEmail()
+            );
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(successResponse);
+        } catch (Exception e) {
+            RegisterResponse errorResponse = new RegisterResponse("Error during registration", false);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
     

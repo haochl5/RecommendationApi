@@ -1,27 +1,31 @@
 FROM openjdk:17-jdk-slim
 
-# Install necessary tools
-RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set working directory
 WORKDIR /app
 
-# Copy Maven wrapper and pom.xml for dependency caching
-COPY mvnw ./
-COPY .mvn ./.mvn
-COPY pom.xml ./
+# Copy Maven wrapper
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
 
-# Make maven wrapper executable
-RUN chmod +x ./mvnw
+# Download dependencies
+RUN ./mvnw dependency:go-offline -B
 
-# Download dependencies (this layer will be cached)
-RUN ./mvnw dependency:go-offline -B || true
+# Copy source code
+COPY src ./src
 
-# Expose application port
+# Build application
+RUN ./mvnw clean package -DskipTests
+
+# Debug: List what was created
+RUN ls -la target/
+
+# Copy JAR to a known name
+RUN cp target/*.jar app.jar
+
+# Verify the file exists
+RUN ls -la app.jar
+
 EXPOSE 8080
 
-# Default command (will be overridden)
-CMD ["tail", "-f", "/dev/null"]
+# Use the copied JAR
+ENTRYPOINT ["java", "-jar", "app.jar"]
