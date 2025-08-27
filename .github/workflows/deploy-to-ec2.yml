@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main, master ]
 
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: hello-world-spring
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -52,53 +56,127 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
 
-    - name: Build application (for validation)
+    - name: Build application
       run: ./mvnw clean package -DskipTests
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      env:
+        IMAGE_TAG: ${{ github.sha }}
+        FULL_IMAGE_NAME: ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
+      run: |
+        docker build -t ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
+        docker build -t ${{ env.FULL_IMAGE_NAME }}:latest .
+        docker push ${{ env.FULL_IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+        docker push ${{ env.FULL_IMAGE_NAME }}:latest
 
     - name: Deploy to EC2
       uses: appleboy/ssh-action@v1.0.0
+      env:
+        FULL_IMAGE_NAME: ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
+        DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       with:
         host: ${{ secrets.EC2_HOST }}
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_SSH_KEY }}
         port: 22
+        envs: FULL_IMAGE_NAME,DOCKERHUB_USERNAME
         script: |
-          # Stop and remove existing container
-          docker stop hello-world-app || true
-          docker rm hello-world-app || true
+          echo "🚀 Starting deployment..."
+          echo "Using image: $FULL_IMAGE_NAME"
           
-          # Remove old images
-          docker rmi $(docker images '${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}' -q) || true
+          # Stop and remove existing container
+          echo "Stopping existing container..."
+          docker stop hello-world-app 2>/dev/null || echo "No existing container to stop"
+          docker rm hello-world-app 2>/dev/null || echo "No existing container to remove"
+          
+          # Remove old images (safer approach)
+          echo "Cleaning up old images..."
+          docker images --format "{{.Repository}}:{{.Tag}}" | grep "$DOCKERHUB_USERNAME/hello-world-spring" | xargs -r docker rmi 2>/dev/null || echo "No old images to remove"
           
           # Pull latest image
-          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+          echo "Pulling latest image..."
+          if ! docker pull $FULL_IMAGE_NAME:latest; then
+            echo "❌ Failed to pull Docker image"
+            exit 1
+          fi
           
           # Run new container
-          docker run -d \
+          echo "Starting new container..."
+          if ! docker run -d \
             --name hello-world-app \
             --restart unless-stopped \
             -p 8080:8080 \
-            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+            $FULL_IMAGE_NAME:latest; then
+            echo "❌ Failed to start container"
+            exit 1
+          fi
           
-          # Wait for application to start
-          sleep 30
+          # Wait for application to start and verify it's running
+          echo "Waiting for application to start..."
+          sleep 10
           
-          # Verify deployment
-          if curl -f http://localhost:8080/hello; then
-            echo "✅ Deployment successful!"
-          else
-            echo "❌ Deployment failed!"
+          # Check if container is running
+          if ! docker ps | grep hello-world-app; then
+            echo "❌ Container is not running"
             docker logs hello-world-app
             exit 1
           fi
+          
+          # Wait a bit more for the application to fully start
+          sleep 20
+          
+          # Verify deployment with health check
+          echo "Verifying deployment..."
+          max_attempts=6
+          attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            echo "Health check attempt $attempt/$max_attempts"
+            
+            # Try different endpoints - adjust based on your Spring Boot app
+            if curl -f -s http://localhost:8080/hello >/dev/null 2>&1; then
+              echo "✅ Application is responding at /hello endpoint"
+              break
+            elif curl -f -s http://localhost:8080/actuator/health >/dev/null 2>&1; then
+              echo "✅ Application is responding at /actuator/health endpoint"
+              break
+            elif curl -f -s http://localhost:8080/ >/dev/null 2>&1; then
+              echo "✅ Application is responding at root endpoint"
+              break
+            else
+              echo "⏳ Application not ready yet, waiting..."
+              sleep 10
+              attempt=$((attempt + 1))
+            fi
+          done
+          
+          if [ $attempt -gt $max_attempts ]; then
+            echo "❌ Deployment verification failed after $max_attempts attempts"
+            echo "Container logs:"
+            docker logs hello-world-app --tail 50
+            echo "Container status:"
+            docker ps -a | grep hello-world-app
+            exit 1
+          fi
+          
+          echo "✅ Deployment successful!"
 
     - name: Notify deployment status
       if: always()
       run: |
         if [ "${{ job.status }}" == "success" ]; then
           echo "🚀 Deployment to EC2 completed successfully!"
-          echo "🌐 Application URL: http://${{ secrets.EC2_HOST }}:8080/hello"
-          echo "📦 Application built from source code on server"
+          echo "🌐 Application should be available at: http://${{ secrets.EC2_HOST }}:8080"
+          echo "📋 Try these endpoints:"
+          echo "   - http://${{ secrets.EC2_HOST }}:8080/hello"
+          echo "   - http://${{ secrets.EC2_HOST }}:8080/actuator/health"
+          echo "   - http://${{ secrets.EC2_HOST }}:8080/"
         else
-          echo "❌ Deployment failed!"
+          echo "❌ Deployment failed! Check the logs above for details."
         fi
