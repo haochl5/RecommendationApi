@@ -1,6 +1,8 @@
 package helloworld.config;
 
 import helloworld.service.UserService;
+
+import org.hibernate.validator.internal.util.stereotypes.Lazy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -14,7 +16,8 @@ import java.util.Collections;
 
 @Component
 public class CustomAuthenticationProvider implements AuthenticationProvider {
-    
+
+    @Lazy
     @Autowired
     private UserService userService;
     

@@ -137,7 +137,7 @@ jobs:
           fi
           
           # Wait a bit more for the application to fully start
-          sleep 20
+          sleep 120
           
           # Verify deployment with health check
           echo "Verifying deployment..."
