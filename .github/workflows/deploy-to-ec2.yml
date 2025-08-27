@@ -113,13 +113,13 @@ jobs:
             --restart unless-stopped \
             -p 8080:8080 \
             -e SPRING_PROFILES_ACTIVE=aws \
-            -e DB_HOST=$DB_HOST \
-            -e DB_PORT=$DB_PORT \
-            -e DB_NAME=$DB_NAME \
-            -e DB_USERNAME=$DB_USERNAME \
-            -e DB_PASSWORD=$DB_PASSWORD \
-            -e JWT_SECRET=$JWT_SECRET \
-            -e JWT_EXPIRATION=$JWT_EXPIRATION \
+            -e DB_HOST=recommendation-db.c1u0u8kyo3n8.us-west-2.rds.amazonaws.com \
+            -e DB_PORT=3306 \
+            -e DB_NAME=recommendation_db \
+            -e DB_USERNAME=admin \
+            -e DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+            -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            -e JWT_EXPIRATION=3600 \
             $FULL_IMAGE_NAME:latest; then
             echo "❌ Failed to start container"
             exit 1
