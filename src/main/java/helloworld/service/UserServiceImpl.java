@@ -5,6 +5,7 @@ import helloworld.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import jakarta.annotation.PostConstruct;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -19,10 +20,9 @@ public class UserServiceImpl implements UserService {
     private PasswordEncoder passwordEncoder;
     
     public UserServiceImpl() {
-        // Initialize demo user if it doesn't exist
-        initializeDemoUser();
     }
     
+    @PostConstruct
     private void initializeDemoUser() {
         if (!userRepository.existsByUsername("user123")) {
             User demoUser = new User("user123", "user123@example.com", "securepass");
