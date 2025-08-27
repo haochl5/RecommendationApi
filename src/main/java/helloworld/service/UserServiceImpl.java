@@ -22,17 +22,6 @@ public class UserServiceImpl implements UserService {
     public UserServiceImpl() {
     }
     
-    @PostConstruct
-    private void initializeDemoUser() {
-        if (!userRepository.existsByUsername("user123")) {
-            User demoUser = new User("user123", "user123@example.com", "securepass");
-            demoUser.setPassword(passwordEncoder.encode("securepass"));
-            demoUser.setCreatedAt(LocalDateTime.now());
-            demoUser.setUpdatedAt(LocalDateTime.now());
-            userRepository.save(demoUser);
-        }
-    }
-    
     @Override
     public User findByUsername(String username) {
         Optional<User> userOpt = userRepository.findByUsername(username);
