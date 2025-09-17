@@ -91,6 +91,26 @@
             <scope>runtime</scope>
             <optional>true</optional>
         </dependency>
+
+        <!-- K-Means Clustering Dependencies -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>3.6.1</version>
+        </dependency>
+
+        <!-- Natural Language Processing for text analysis -->
+        <dependency>
+            <groupId>org.apache.opennlp</groupId>
+            <artifactId>opennlp-tools</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+
+        <!-- JSON processing for feature vectors -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
     </dependencies>
 
     <!-- Build Configuration -->
