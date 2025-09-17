@@ -79,23 +79,22 @@ public class FeatureExtractionServiceImpl implements FeatureExtractionService {
         Map<String, Double> normalized = new HashMap<>();
         
         // Define normalization ranges for different features
-        Map<String, Double[]> normalizationRanges = Map.of(
-            "description_length", new Double[]{0.0, 1000.0},
-            "word_count", new Double[]{0.0, 100.0},
-            "avg_word_length", new Double[]{0.0, 20.0},
-            "category_encoded", new Double[]{1.0, 4.0},
-            "price", new Double[]{0.0, 1000.0},
-            "rating", new Double[]{0.0, 5.0},
-            "views", new Double[]{0.0, 10000.0},
-            "popularity", new Double[]{0.0, 1.0},
-            "user_age_days", new Double[]{0.0, 3650.0}, // 10 years
-            "purchase_count", new Double[]{0.0, 100.0},
-            "total_order_amount", new Double[]{0.0, 10000.0},
-            "avg_order_value", new Double[]{0.0, 1000.0},
-            "region", new Double[]{1.0, 4.0},
-            "purchase_frequency", new Double[]{0.0, 10.0},
-            "account_activity", new Double[]{0.0, 1.0}
-        );
+        Map<String, Double[]> normalizationRanges = new HashMap<>();
+        normalizationRanges.put("description_length", new Double[]{0.0, 1000.0});
+        normalizationRanges.put("word_count", new Double[]{0.0, 100.0});
+        normalizationRanges.put("avg_word_length", new Double[]{0.0, 20.0});
+        normalizationRanges.put("category_encoded", new Double[]{1.0, 4.0});
+        normalizationRanges.put("price", new Double[]{0.0, 1000.0});
+        normalizationRanges.put("rating", new Double[]{0.0, 5.0});
+        normalizationRanges.put("views", new Double[]{0.0, 10000.0});
+        normalizationRanges.put("popularity", new Double[]{0.0, 1.0});
+        normalizationRanges.put("user_age_days", new Double[]{0.0, 3650.0}); // 10 years
+        normalizationRanges.put("purchase_count", new Double[]{0.0, 100.0});
+        normalizationRanges.put("total_order_amount", new Double[]{0.0, 10000.0});
+        normalizationRanges.put("avg_order_value", new Double[]{0.0, 1000.0});
+        normalizationRanges.put("region", new Double[]{1.0, 4.0});
+        normalizationRanges.put("purchase_frequency", new Double[]{0.0, 10.0});
+        normalizationRanges.put("account_activity", new Double[]{0.0, 1.0});
         
         for (Map.Entry<String, Object> entry : features.entrySet()) {
             String key = entry.getKey();

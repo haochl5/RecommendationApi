@@ -52,7 +52,7 @@ public class ClusteringServiceImpl implements ClusteringService {
         }
         
         // Perform k-means clustering
-        KMeansPlusPlusClusterer<DoublePoint> clusterer = new KMeansPlusPlusClusterer<>(
+        KMeansPlusPlusClusterer<DoublePoint> clusterer = new KMeansPlusPlusClusterer<DoublePoint>(
             Math.min(k, points.size()), MAX_ITERATIONS, new EuclideanDistance(), RANDOM_SEED
         );
         
@@ -104,7 +104,7 @@ public class ClusteringServiceImpl implements ClusteringService {
         }
         
         // Perform k-means clustering
-        KMeansPlusPlusClusterer<DoublePoint> clusterer = new KMeansPlusPlusClusterer<>(
+        KMeansPlusPlusClusterer<DoublePoint> clusterer = new KMeansPlusPlusClusterer<DoublePoint>(
             Math.min(k, points.size()), MAX_ITERATIONS, new EuclideanDistance(), RANDOM_SEED
         );
         
