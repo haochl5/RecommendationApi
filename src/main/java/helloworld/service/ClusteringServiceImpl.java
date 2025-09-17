@@ -6,6 +6,8 @@ import org.apache.commons.math3.ml.clustering.KMeansPlusPlusClusterer;
 import org.apache.commons.math3.ml.clustering.CentroidCluster;
 import org.apache.commons.math3.ml.clustering.DoublePoint;
 import org.apache.commons.math3.ml.distance.EuclideanDistance;
+import org.apache.commons.math3.random.RandomGenerator;
+import org.apache.commons.math3.random.Well19937c;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -52,8 +54,9 @@ public class ClusteringServiceImpl implements ClusteringService {
         }
         
         // Perform k-means clustering
+        RandomGenerator randomGenerator = new Well19937c(RANDOM_SEED);
         KMeansPlusPlusClusterer<DoublePoint> clusterer = new KMeansPlusPlusClusterer<DoublePoint>(
-            Math.min(k, points.size()), MAX_ITERATIONS, new EuclideanDistance(), RANDOM_SEED
+            Math.min(k, points.size()), MAX_ITERATIONS, new EuclideanDistance(), randomGenerator
         );
         
         List<CentroidCluster<DoublePoint>> clusters = clusterer.cluster(points);
@@ -104,8 +107,9 @@ public class ClusteringServiceImpl implements ClusteringService {
         }
         
         // Perform k-means clustering
+        RandomGenerator randomGenerator = new Well19937c(RANDOM_SEED);
         KMeansPlusPlusClusterer<DoublePoint> clusterer = new KMeansPlusPlusClusterer<DoublePoint>(
-            Math.min(k, points.size()), MAX_ITERATIONS, new EuclideanDistance(), RANDOM_SEED
+            Math.min(k, points.size()), MAX_ITERATIONS, new EuclideanDistance(), randomGenerator
         );
         
         List<CentroidCluster<DoublePoint>> clusters = clusterer.cluster(points);
