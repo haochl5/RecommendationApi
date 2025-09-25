@@ -1,5 +1,5 @@
 # Recommendation API
-
+1
 A Spring Boot application with JWT-based authentication system and AWS RDS MySQL database integration.
 
 ## Features
