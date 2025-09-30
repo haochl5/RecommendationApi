@@ -1,0 +1,13 @@
+docker run -d \
+  --name hello-world-app \
+  --restart unless-stopped \
+  -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=aws \
+  -e DB_HOST=recommendation-db.c1u0u8kyo3n8.us-west-2.rds.amazonaws.com \
+  -e DB_PORT=3306 \
+  -e DB_NAME=recommendation_db \
+  -e DB_USERNAME=admin \
+  -e DB_PASSWORD=>KF$awiPY5*yZ~:Y~pV(IWBC0nyG \
+  -e JWT_SECRET=N6qNRrJw7dmDGpj7RZV0lk9WqA8GS/NVLnubZtVVwOc= \
+  -e JWT_EXPIRATION=3600 \
+  haocheng5/hello-world-spring:latest

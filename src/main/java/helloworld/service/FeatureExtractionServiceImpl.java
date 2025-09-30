@@ -75,48 +75,56 @@ public class FeatureExtractionServiceImpl implements FeatureExtractionService {
     }
     
     @Override
-    public Map<String, Double> normalizeFeatures(Map<String, Object> features) {
-        Map<String, Double> normalized = new HashMap<>();
+public Map<String, Double> normalizeFeatures(Map<String, Object> features) {
+    Map<String, Double> normalized = new HashMap<>();
+    
+    // Define Z-score parameters (mean, std) for different features
+    Map<String, Double[]> zScoreParams = new HashMap<>();
+    zScoreParams.put("description_length", new Double[]{500.0, 200.0}); // mean, std
+    zScoreParams.put("word_count", new Double[]{50.0, 20.0});
+    zScoreParams.put("avg_word_length", new Double[]{5.0, 2.0});
+    zScoreParams.put("category_encoded", new Double[]{2.5, 1.0});
+    zScoreParams.put("price", new Double[]{150.0, 100.0});
+    zScoreParams.put("rating", new Double[]{3.5, 1.0});
+    zScoreParams.put("views", new Double[]{1000.0, 500.0});
+    zScoreParams.put("popularity", new Double[]{0.5, 0.3});
+    zScoreParams.put("user_age_days", new Double[]{1000.0, 500.0});
+    zScoreParams.put("purchase_count", new Double[]{10.0, 5.0});
+    zScoreParams.put("total_order_amount", new Double[]{500.0, 300.0});
+    zScoreParams.put("avg_order_value", new Double[]{50.0, 30.0});
+    zScoreParams.put("region", new Double[]{2.5, 1.0});
+    zScoreParams.put("purchase_frequency", new Double[]{2.0, 1.0});
+    zScoreParams.put("account_activity", new Double[]{0.5, 0.3});
+    
+    for (Map.Entry<String, Object> entry : features.entrySet()) {
+        String key = entry.getKey();
+        Object value = entry.getValue();
         
-        // Define normalization ranges for different features
-        Map<String, Double[]> normalizationRanges = new HashMap<>();
-        normalizationRanges.put("description_length", new Double[]{0.0, 1000.0});
-        normalizationRanges.put("word_count", new Double[]{0.0, 100.0});
-        normalizationRanges.put("avg_word_length", new Double[]{0.0, 20.0});
-        normalizationRanges.put("category_encoded", new Double[]{1.0, 4.0});
-        normalizationRanges.put("price", new Double[]{0.0, 1000.0});
-        normalizationRanges.put("rating", new Double[]{0.0, 5.0});
-        normalizationRanges.put("views", new Double[]{0.0, 10000.0});
-        normalizationRanges.put("popularity", new Double[]{0.0, 1.0});
-        normalizationRanges.put("user_age_days", new Double[]{0.0, 3650.0}); // 10 years
-        normalizationRanges.put("purchase_count", new Double[]{0.0, 100.0});
-        normalizationRanges.put("total_order_amount", new Double[]{0.0, 10000.0});
-        normalizationRanges.put("avg_order_value", new Double[]{0.0, 1000.0});
-        normalizationRanges.put("region", new Double[]{1.0, 4.0});
-        normalizationRanges.put("purchase_frequency", new Double[]{0.0, 10.0});
-        normalizationRanges.put("account_activity", new Double[]{0.0, 1.0});
-        
-        for (Map.Entry<String, Object> entry : features.entrySet()) {
-            String key = entry.getKey();
-            Object value = entry.getValue();
+        if (value instanceof Number) {
+            double numValue = ((Number) value).doubleValue();
+            Double[] params = zScoreParams.get(key);
             
-            if (value instanceof Number) {
-                double numValue = ((Number) value).doubleValue();
-                Double[] range = normalizationRanges.get(key);
+            if (params != null) {
+                double mean = params[0];
+                double stdDev = params[1];
                 
-                if (range != null) {
-                    // Min-max normalization
-                    double normalizedValue = (numValue - range[0]) / (range[1] - range[0]);
-                    normalizedValue = Math.max(0.0, Math.min(1.0, normalizedValue)); // Clamp to [0,1]
-                    normalized.put(key, normalizedValue);
+                // Z-score formula: (x - mean) / stdDev
+                if (stdDev > 0) {
+                    double zScore = (numValue - mean) / stdDev;
+                    // Clamp extreme values to prevent outliers from dominating
+                    zScore = Math.max(-3.0, Math.min(3.0, zScore));
+                    normalized.put(key, zScore);
                 } else {
-                    normalized.put(key, numValue);
+                    normalized.put(key, 0.0);
                 }
+            } else {
+                normalized.put(key, numValue);
             }
         }
-        
-        return normalized;
     }
+    
+    return normalized;
+}
     
     @Override
     public double[] featuresToVector(Map<String, Double> normalizedFeatures) {
